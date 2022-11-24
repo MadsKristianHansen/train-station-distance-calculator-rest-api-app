@@ -9,13 +9,15 @@ import org.json.JSONObject;
 
 import java.util.Optional;
 
-
+// create a RestController in order to process HTTP-Requests
 @RestController
 public class CalculatorController {
 
+    // Dependency Injection: automatically connect CRUDRepository with @Autowired Annotation
     @Autowired
     private StationDataRepository stationDataRepository;
 
+    // 1.Mockup-Test:
     @GetMapping("/api/v1/distance/FF/BLS")
     public ResponseEntity<DistanceData> getMockupDistanceData(){
 
@@ -29,6 +31,7 @@ public class CalculatorController {
 
     }
 
+    // Test: get <StationData> via id/primary key from db
     @GetMapping("/api/stationData")
     public ResponseEntity<StationData> getStationData(@RequestParam(value = "id") int id){
 
@@ -42,6 +45,7 @@ public class CalculatorController {
 
     }
 
+    // Method to calculate the air-line distance in km between two points with given latitudes and longitudes
     public static double distanceInKm(double lat1, double lon1, double lat2, double lon2) {
         int radius = 6371;
 
@@ -55,15 +59,19 @@ public class CalculatorController {
         return Math.abs(d);
     }
 
+    // Method to get the DistanceData between two trainStations
     @GetMapping("/api/vi/distance")
     public ResponseEntity<String> getDistanceData(@RequestParam(value = "ds100") String ds100,
                                                       @RequestParam(value = "ds100_2") String ds100_2){
 
+        // search for StationData with given ds100-codes in DB
         var validStationDataInDb = stationDataRepository.findByDs100(ds100);
         var validStationDataInDb2 = stationDataRepository.findByDs100(ds100_2);
 
+        // execute further code if StationData has been found
         if(validStationDataInDb.isPresent() && validStationDataInDb2.isPresent()) {
 
+            // get needed values from StationData and set them to variables
             String stationDataFrom = validStationDataInDb.get().getName();
             String stationDataTo = validStationDataInDb2.get().getName();
             Double stationData1Laenge = validStationDataInDb.get().getLaenge();
@@ -71,22 +79,28 @@ public class CalculatorController {
             Double stationData2Laenge = validStationDataInDb2.get().getLaenge();
             Double stationData2Breite = validStationDataInDb2.get().getBreite();
 
+            // calculate air-line distance between two stations with given values
             Double distance = distanceInKm(stationData1Breite, stationData1Laenge, stationData2Breite, stationData2Laenge);
+            // round solution to full integer
             int distanceRound = (int) Math.round(distance);
 
+            // create new JSONObject with desired keys and values
             JSONObject distanceData = new JSONObject();
             distanceData.put("from", stationDataFrom);
             distanceData.put("to", stationDataTo);
             distanceData.put("distance", distanceRound);
             distanceData.put("unit", "km");
 
+            // return final JSONObject
             return new ResponseEntity<String>(distanceData.toString(), HttpStatus.OK);
         }
 
+        // return NOT_FOUND Message if one or both ds100-codes are incorrect/not stored in DB
         return new ResponseEntity("One or more stationData not found with ds100 " + ds100 + " and/or ds100 " + ds100_2,HttpStatus.NOT_FOUND);
 
     }
 
+    // Method to post and store <StationData> in DB
     @PostMapping("/api/stationData")
     public ResponseEntity<StationData> createStationData(@RequestBody StationData newStationData){
         stationDataRepository.save(newStationData);
