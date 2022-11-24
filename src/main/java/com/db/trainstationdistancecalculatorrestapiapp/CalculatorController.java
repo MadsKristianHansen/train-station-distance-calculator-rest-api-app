@@ -18,7 +18,7 @@ public class CalculatorController {
     private StationDataRepository stationDataRepository;
 
     // 1.Mockup-Test:
-    @GetMapping("/api/v1/distance/FF/BLS")
+    @GetMapping("/api/v1/distance/FF/BLS/Test")
     public ResponseEntity<DistanceData> getMockupDistanceData(){
 
         DistanceData finalDistanceData = new DistanceData();
@@ -59,10 +59,51 @@ public class CalculatorController {
         return Math.abs(d);
     }
 
-    // Method to get the DistanceData between two trainStations
-    @GetMapping("/api/vi/distance")
+    // Method to get the DistanceData between two trainStations via @RequestParam
+    @GetMapping("/api/v1/distance")
     public ResponseEntity<String> getDistanceData(@RequestParam(value = "ds100") String ds100,
                                                       @RequestParam(value = "ds100_2") String ds100_2){
+
+        // search for StationData with given ds100-codes in DB
+        var validStationDataInDb = stationDataRepository.findByDs100(ds100);
+        var validStationDataInDb2 = stationDataRepository.findByDs100(ds100_2);
+
+        // execute further code if StationData has been found
+        if(validStationDataInDb.isPresent() && validStationDataInDb2.isPresent()) {
+
+            // get needed values from StationData and set them to variables
+            String stationDataFrom = validStationDataInDb.get().getName();
+            String stationDataTo = validStationDataInDb2.get().getName();
+            Double stationData1Laenge = validStationDataInDb.get().getLaenge();
+            Double stationData1Breite = validStationDataInDb.get().getBreite();
+            Double stationData2Laenge = validStationDataInDb2.get().getLaenge();
+            Double stationData2Breite = validStationDataInDb2.get().getBreite();
+
+            // calculate air-line distance between two stations with given values
+            Double distance = distanceInKm(stationData1Breite, stationData1Laenge, stationData2Breite, stationData2Laenge);
+            // round solution to full integer
+            int distanceRound = (int) Math.round(distance);
+
+            // create new JSONObject with desired keys and values
+            JSONObject distanceData = new JSONObject();
+            distanceData.put("from", stationDataFrom);
+            distanceData.put("to", stationDataTo);
+            distanceData.put("distance", distanceRound);
+            distanceData.put("unit", "km");
+
+            // return final JSONObject
+            return new ResponseEntity<String>(distanceData.toString(), HttpStatus.OK);
+        }
+
+        // return NOT_FOUND Message if one or both ds100-codes are incorrect/not stored in DB
+        return new ResponseEntity("One or more stationData not found with ds100 " + ds100 + " and/or ds100 " + ds100_2,HttpStatus.NOT_FOUND);
+
+    }
+
+    // Method to get the DistanceData between two trainStations via @PathVariable
+    @GetMapping("/api/v1/distance/{ds100}/{ds100_2}")
+    public ResponseEntity<String> getDistanceDataByPath(@PathVariable(value = "ds100") String ds100,
+                                                  @PathVariable(value = "ds100_2") String ds100_2){
 
         // search for StationData with given ds100-codes in DB
         var validStationDataInDb = stationDataRepository.findByDs100(ds100);
