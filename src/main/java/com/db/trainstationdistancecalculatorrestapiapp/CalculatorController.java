@@ -102,7 +102,7 @@ public class CalculatorController {
 
     // Method to get the DistanceData between two trainStations via @PathVariable
     @GetMapping("/api/v1/distance/{ds100}/{ds100_2}")
-    public ResponseEntity<String> getDistanceDataByPath(@PathVariable(value = "ds100") String ds100,
+    public ResponseEntity<DistanceData> getDistanceDataByPath(@PathVariable(value = "ds100") String ds100,
                                                   @PathVariable(value = "ds100_2") String ds100_2){
 
         // search for StationData with given ds100-codes in DB
@@ -125,15 +125,15 @@ public class CalculatorController {
             // round solution to full integer
             int distanceRound = (int) Math.round(distance);
 
-            // create new JSONObject with desired keys and values
-            JSONObject distanceData = new JSONObject();
-            distanceData.put("from", stationDataFrom);
-            distanceData.put("to", stationDataTo);
-            distanceData.put("distance", distanceRound);
-            distanceData.put("unit", "km");
+            // create new DistanceDataObject with desired values
+            DistanceData finalDistanceData = new DistanceData();
+            finalDistanceData.setFrom(stationDataFrom);
+            finalDistanceData.setTo(stationDataTo);
+            finalDistanceData.setDistance(distanceRound);
+            finalDistanceData.setUnit("km");
 
-            // return final JSONObject
-            return new ResponseEntity<String>(distanceData.toString(), HttpStatus.OK);
+            // return final DistanceData
+            return new ResponseEntity<DistanceData>(finalDistanceData, HttpStatus.OK);
         }
 
         // return NOT_FOUND Message if one or both ds100-codes are incorrect/not stored in DB
